@@ -1,4 +1,4 @@
-## Option 1: To run it user yarn:
+## Option 1: To run it using yarn:
 ```bash
 npm install --global yarn
 
@@ -9,7 +9,7 @@ yarn start
 
 Open the [demo](http://localhost:3000/)
 
-## Option 2: To start and build the docker image, run:
+## Option 2: To build and run the docker image, run:
 ```bash
 docker build -t perfworkloadsearch:latest .
 
