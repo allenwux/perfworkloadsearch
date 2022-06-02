@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 import {
   SearchBox,
@@ -9,7 +9,40 @@ import ReactPaginate from "react-paginate";
 
 import "./styles.css";
 
-export default () => (
+import Dialog from "@material-ui/core/Dialog";
+import DialogContentText from "@material-ui/core/DialogContentText";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogActions from "@material-ui/core/DialogActions";
+import DialogContent from "@material-ui/core/DialogContent";
+import Button from "@material-ui/core/Button";
+
+const SearchPage = () => {
+
+  const sampleWorkload = {
+    "test_name": "test",
+    "workloads": [
+      {
+        "owning_team": "",
+        "description": "lala",
+        "github_repo": "",
+        "source_code": ""
+      }
+    ]
+  }
+
+  const [detailsVisible, setDetailsVisible] = useState(false);
+  const [selectedWorkload, setSelectedWorkload] = useState(sampleWorkload);
+    
+  const showWorkloadDetails = (workload) => {
+    setSelectedWorkload(workload);
+    setDetailsVisible(true);
+  };
+
+  const hideWorkloadDetails = () => {
+    setDetailsVisible(false);
+  };
+
+  return (
   <SearchBase
     index="perf-workloads-final"
     url="https://webhooks.mongodb-realm.com/api/client/v2.0/app/perfdocuments-wqaiw/service/http_endpoint/incoming_webhook/reactivesearch"
@@ -19,7 +52,9 @@ export default () => (
     }}
   >
     <div>
-      <h2>Performance Workloads Search Demo</h2>
+
+
+      <h1>Performance Workloads Search</h1>
 
       <SearchBox
         id="search-component"
@@ -37,11 +72,62 @@ export default () => (
             weight: 5
           }
         ]}
-        title="@server-perf"
+        title="@product-perf"
         placeholder="Search for workloads"
       />
       <div className="row">
         <div className="col">
+          <SearchComponent
+            id="project-filter"
+            type="term"
+            dataField="test_type"
+            URLParams
+            queryFormat="and"
+            aggregationSize={10}
+            includeFields={["test_type"]}
+            react={{
+              and: ["search-component", "variant-filter", "keywords-filter"]
+            }}
+            // To initialize with default value
+            value={[]}
+            render={({ aggregationData, loading, value, setValue }) => {
+              return (
+                <div className="filter-container">
+                  <div className="list-title">Performence Projects</div>
+                  {loading ? (
+                    <div>Loading Performence Projects ...</div>
+                  ) : (
+                    aggregationData.data.map((item) => (
+                      <div className="list-item" key={item._key}>
+                        <input
+                          type="checkbox"
+                          checked={value ? value.includes(item._key) : false}
+                          value={item._key}
+                          onChange={(e) => {
+                            const values = value || [];
+                            if (values && values.includes(e.target.value)) {
+                              values.splice(values.indexOf(e.target.value), 1);
+                            } else {
+                              values.push(e.target.value);
+                            }
+                            // Set filter value and trigger custom query
+                            setValue(values, {
+                              triggerDefaultQuery: false,
+                              triggerCustomQuery: true,
+                              stateChanges: true
+                            });
+                          }}
+                        />
+                        <label className="list-item-label" htmlFor={item._key}>
+                          {item._key} ({item._doc_count})
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+              );
+            }}
+          />
           <SearchComponent
             id="keywords-filter"
             type="term"
@@ -51,7 +137,7 @@ export default () => (
             aggregationSize={10}
             includeFields={["keywords"]}
             react={{
-              and: ["search-component", "variant-filter"]
+              and: ["search-component", "variant-filter", "project-filter"]
             }}
             // To initialize with default value
             value={[]}
@@ -104,7 +190,7 @@ export default () => (
             // To initialize with default value
             value={[]}
             react={{
-              and: ["search-component", "keywords-filter"]
+              and: ["search-component", "keywords-filter", "project-filter"]
             }}
             render={({ aggregationData, loading, value, setValue }) => {
               return (
@@ -191,13 +277,16 @@ export default () => (
                           key={item._id}
                           style={{ padding: 10 }}
                         >
+
                           <h1>{item.test_name}</h1>
+
                           {item.workloads[0] ? item.workloads[0].description.substring(
                                   0,
                                   Math.min(260, item.workloads[0].description.length)
                                 ) : ""}
                             ...
                           
+                          <br />
                           <br />
                           <span
                             style={{
@@ -215,6 +304,16 @@ export default () => (
                               return x + ";";
                             })}
                           </span>
+
+                          <br />
+                          <br />
+                          <Button variant="outlined" color="primary" 
+                                  onClick={() => showWorkloadDetails({
+                                    "test_name": item.test_name,
+                                    "workloads": item.workloads
+                                    })}>
+                            Details
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -245,8 +344,45 @@ export default () => (
               );
             }}
           </SearchComponent>
+
+          <Dialog maxWidth={true} open={detailsVisible} onClose={hideWorkloadDetails}>
+            <DialogTitle><h2>{selectedWorkload.test_name}</h2></DialogTitle>
+            <DialogContent>
+              <DialogContentText align="left">
+                
+                <h3>Number of workloads: {selectedWorkload.workloads.length}</h3>
+                
+                {selectedWorkload.workloads.map((workload, i) => (
+                <div>
+                  <br/>
+                  <h3>Workload #{i+1}</h3>
+                  <b>Owning team:</b>{workload.owning_team}
+                  <br/>
+                  <b>Description:</b>{workload.description}
+                  <br/>
+                  <a href={workload.github_repo + workload.source_code} target="_blank">Source Code</a> 
+                </div>
+                
+                
+
+                ))}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={hideWorkloadDetails} 
+                      color="primary" autoFocus>
+                Close
+              </Button>
+            </DialogActions>
+          </Dialog>
+
         </div>
       </div>
+      <br/>
+      <h5>© 2022 MongoDB, Inc.</h5>
+      <br/>
     </div>
   </SearchBase>
-);
+);}
+
+export default SearchPage;
